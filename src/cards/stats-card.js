@@ -20,14 +20,16 @@ const RANK_CARD_DEFAULT_WIDTH = 450;
 /**
  * Create a stats card text item.
  *
- * @param {object[]} createTextNodeParams Object that contains the createTextNode parameters.
+ * @param {object} createTextNodeParams Object that contains the createTextNode parameters.
+ * @param {string} createTextNodeParams.icon The icon to display.
  * @param {string} createTextNodeParams.label The label to display.
- * @param {string} createTextNodeParams.value The value to display.
+ * @param {number} createTextNodeParams.value The value to display.
  * @param {string} createTextNodeParams.id The id of the stat.
  * @param {number} createTextNodeParams.index The index of the stat.
  * @param {boolean} createTextNodeParams.showIcons Whether to show icons.
  * @param {number} createTextNodeParams.shiftValuePos Number of pixels the value has to be shifted to the right.
  * @param {boolean} createTextNodeParams.bold Whether to bold the label.
+ * @param {string} createTextNodeParams.number_format The format of numbers on card.
  * @returns
  */
 const createTextNode = ({
@@ -76,13 +78,14 @@ const createTextNode = ({
  * @param {Partial<import("./types").StatCardOptions>} options The card options.
  * @returns {string} The stats card SVG object.
  */
-const renderStatsCard = (stats = {}, options = { hide: [] }) => {
+const renderStatsCard = (stats = {}, options = {}) => {
   const {
     name,
     totalStars,
     totalCommits,
     totalIssues,
     totalPRs,
+    totalReviews,
     contributedTo,
     rank,
   } = stats;
@@ -109,6 +112,7 @@ const renderStatsCard = (stats = {}, options = { hide: [] }) => {
     locale,
     disable_animations = false,
     rank_icon = "default",
+    show = [],
   } = options;
 
   const lheight = parseInt(String(line_height), 10);
@@ -134,39 +138,49 @@ const renderStatsCard = (stats = {}, options = { hide: [] }) => {
   });
 
   // Meta data for creating text nodes with createTextNode function
-  const STATS = {
-    stars: {
-      icon: icons.star,
-      label: i18n.t("statcard.totalstars"),
-      value: totalStars,
-      id: "stars",
-    },
-    commits: {
-      icon: icons.commits,
-      label: `${i18n.t("statcard.commits")}${
-        include_all_commits ? "" : ` (${new Date().getFullYear()})`
-      }`,
-      value: totalCommits,
-      id: "commits",
-    },
-    prs: {
-      icon: icons.prs,
-      label: i18n.t("statcard.prs"),
-      value: totalPRs,
-      id: "prs",
-    },
-    issues: {
-      icon: icons.issues,
-      label: i18n.t("statcard.issues"),
-      value: totalIssues,
-      id: "issues",
-    },
-    contribs: {
-      icon: icons.contribs,
-      label: i18n.t("statcard.contribs") + " (last year)",
-      value: contributedTo,
-      id: "contribs",
-    },
+  const STATS = {};
+
+  STATS.stars = {
+    icon: icons.star,
+    label: i18n.t("statcard.totalstars"),
+    value: totalStars,
+    id: "stars",
+  };
+  STATS.commits = {
+    icon: icons.commits,
+    label: `${i18n.t("statcard.commits")}${
+      include_all_commits ? "" : ` (${new Date().getFullYear()})`
+    }`,
+    value: totalCommits,
+    id: "commits",
+  };
+  STATS.prs = {
+    icon: icons.prs,
+    label: i18n.t("statcard.prs"),
+    value: totalPRs,
+    id: "prs",
+  };
+
+  if (show.includes("reviews")) {
+    STATS.reviews = {
+      icon: icons.reviews,
+      label: i18n.t("statcard.reviews"),
+      value: totalReviews,
+      id: "reviews",
+    };
+  }
+
+  STATS.issues = {
+    icon: icons.issues,
+    label: i18n.t("statcard.issues"),
+    value: totalIssues,
+    id: "issues",
+  };
+  STATS.contribs = {
+    icon: icons.contribs,
+    label: i18n.t("statcard.contribs"),
+    value: contributedTo,
+    id: "contribs",
   };
 
   const longLocales = [
@@ -207,9 +221,8 @@ const renderStatsCard = (stats = {}, options = { hide: [] }) => {
     hide_rank ? 0 : 150,
   );
 
-  // the better user's score the the rank will be closer to zero so
-  // subtracting 100 to get the progress in 100%
-  const progress = 100 - rank.score;
+  // the lower the user's percentile the better
+  const progress = 100 - rank.percentile;
   const cssStyles = getStyles({
     titleColor,
     ringColor,
